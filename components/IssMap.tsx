@@ -29,13 +29,20 @@ function formatLon(lon: number): string {
 interface IssMarkerLayerProps {
   onPosition: (pos: IssPosition) => void;
   onError: () => void;
+  follow: boolean;
 }
 
-function IssMarkerLayer({ onPosition, onError }: IssMarkerLayerProps) {
+function IssMarkerLayer({ onPosition, onError, follow }: IssMarkerLayerProps) {
   const map = useMap();
   const markerRef = useRef<L.Marker | null>(null);
   const positionRef = useRef<IssPosition | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const followRef = useRef(follow);
+
+  // Keep followRef in sync with the follow prop without re-running the main effect
+  useEffect(() => {
+    followRef.current = follow;
+  }, [follow]);
 
   useEffect(() => {
     let mounted = true;
@@ -111,8 +118,18 @@ function IssMarkerLayer({ onPosition, onError }: IssMarkerLayerProps) {
             icon: issIcon,
           }).addTo(map);
           markerRef.current = marker;
+
+          // Center the map on the ISS on first load if follow is on
+          if (followRef.current) {
+            map.panTo([pos.latitude, pos.longitude], { animate: true, duration: 1 });
+          }
         } else {
           animateTo(pos);
+
+          // Recenter map if follow is enabled
+          if (followRef.current) {
+            map.panTo([pos.latitude, pos.longitude], { animate: true, duration: 1 });
+          }
         }
 
         positionRef.current = pos;
@@ -203,10 +220,46 @@ function ReadoutOverlay({ position, isStale }: ReadoutOverlayProps) {
   );
 }
 
+// ── Follow toggle overlay ─────────────────────────────────────────────────────
+
+interface FollowToggleProps {
+  follow: boolean;
+  onToggle: () => void;
+}
+
+function FollowToggle({ follow, onToggle }: FollowToggleProps) {
+  return (
+    <div className="absolute top-3 right-3 z-[1000] pointer-events-none">
+      <button
+        onClick={onToggle}
+        aria-pressed={follow}
+        className={[
+          'pointer-events-auto',
+          'bg-slate-900/80 backdrop-blur border rounded-lg px-4 py-2',
+          'text-sm font-medium flex items-center gap-2 transition-colors duration-150',
+          follow
+            ? 'border-emerald-500/60 text-emerald-400'
+            : 'border-slate-700/60 text-slate-400',
+        ].join(' ')}
+      >
+        {/* Pill indicator */}
+        <span
+          className={[
+            'inline-block w-2 h-2 rounded-full transition-colors duration-150',
+            follow ? 'bg-emerald-400' : 'bg-slate-600',
+          ].join(' ')}
+        />
+        Follow: {follow ? 'On' : 'Off'}
+      </button>
+    </div>
+  );
+}
+
 // ── Public component ──────────────────────────────────────────────────────────
 export default function IssMap() {
   const [position, setPosition] = useState<IssPosition | null>(null);
   const [isStale, setIsStale] = useState(false);
+  const [follow, setFollow] = useState(true);
 
   function handlePosition(pos: IssPosition) {
     setPosition(pos);
@@ -215,6 +268,10 @@ export default function IssMap() {
 
   function handleError() {
     setIsStale(true);
+  }
+
+  function handleToggleFollow() {
+    setFollow((prev) => !prev);
   }
 
   return (
@@ -230,10 +287,15 @@ export default function IssMap() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        <IssMarkerLayer onPosition={handlePosition} onError={handleError} />
+        <IssMarkerLayer
+          onPosition={handlePosition}
+          onError={handleError}
+          follow={follow}
+        />
       </MapContainer>
 
       <ReadoutOverlay position={position} isStale={isStale} />
+      <FollowToggle follow={follow} onToggle={handleToggleFollow} />
     </div>
   );
 }
