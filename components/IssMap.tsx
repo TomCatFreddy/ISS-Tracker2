@@ -38,11 +38,19 @@ function IssMarkerLayer({ onPosition, onError, follow }: IssMarkerLayerProps) {
   const positionRef = useRef<IssPosition | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const followRef = useRef(follow);
+  const onPositionRef = useRef(onPosition);
+  const onErrorRef = useRef(onError);
 
   // Keep followRef in sync with the follow prop without re-running the main effect
   useEffect(() => {
     followRef.current = follow;
   }, [follow]);
+
+  // Keep callback refs in sync without re-running the main effect
+  useEffect(() => {
+    onPositionRef.current = onPosition;
+    onErrorRef.current = onError;
+  }, [onPosition, onError]);
 
   useEffect(() => {
     let mounted = true;
@@ -133,10 +141,10 @@ function IssMarkerLayer({ onPosition, onError, follow }: IssMarkerLayerProps) {
         }
 
         positionRef.current = pos;
-        onPosition(pos);
+        onPositionRef.current(pos);
       } catch (err) {
         console.error('[IssMarkerLayer] fetch failed:', err);
-        onError();
+        onErrorRef.current();
       }
     }
 
@@ -156,7 +164,7 @@ function IssMarkerLayer({ onPosition, onError, follow }: IssMarkerLayerProps) {
         markerRef.current = null;
       }
     };
-  }, [map, onPosition, onError]);
+  }, [map]);
 
   return null;
 }

@@ -27,6 +27,19 @@ export async function GET() {
       timestamp: Number(data.timestamp),
     };
 
+    if (
+      !Number.isFinite(position.latitude) ||
+      !Number.isFinite(position.longitude) ||
+      !Number.isFinite(position.altitude) ||
+      !Number.isFinite(position.velocity) ||
+      !Number.isFinite(position.timestamp)
+    ) {
+      return NextResponse.json(
+        { error: 'Upstream returned malformed data' },
+        { status: 502 },
+      );
+    }
+
     return NextResponse.json(position);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

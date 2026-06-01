@@ -20,11 +20,11 @@ export async function fetchIssPosition(): Promise<IssPosition> {
   if (
     data === null ||
     typeof data !== 'object' ||
-    typeof (data as Record<string, unknown>).latitude !== 'number' ||
-    typeof (data as Record<string, unknown>).longitude !== 'number' ||
-    typeof (data as Record<string, unknown>).altitude !== 'number' ||
-    typeof (data as Record<string, unknown>).velocity !== 'number' ||
-    typeof (data as Record<string, unknown>).timestamp !== 'number'
+    !Number.isFinite((data as Record<string, unknown>).latitude as number) ||
+    !Number.isFinite((data as Record<string, unknown>).longitude as number) ||
+    !Number.isFinite((data as Record<string, unknown>).altitude as number) ||
+    !Number.isFinite((data as Record<string, unknown>).velocity as number) ||
+    !Number.isFinite((data as Record<string, unknown>).timestamp as number)
   ) {
     throw new Error('ISS API response has unexpected shape');
   }
